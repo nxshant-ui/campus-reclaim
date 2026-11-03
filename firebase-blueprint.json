@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User profile with student or staff details",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["student", "staff", "admin"], "maxLength": 20 },
+        "campusId": { "type": "string", "maxLength": 50 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "department": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Item": {
+      "title": "Lost or Found Item",
+      "description": "A reported lost or found item on campus",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "itemType": { "type": "string", "enum": ["lost", "found"], "maxLength": 10 },
+        "category": { "type": "string", "maxLength": 50 },
+        "location": { "type": "string", "maxLength": 150 },
+        "incidentDate": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "enum": ["open", "claimed", "returned", "closed"], "maxLength": 20 },
+        "imageUrl": { "type": "string", "maxLength": 1000000 },
+        "contactName": { "type": "string", "maxLength": 100 },
+        "contactEmail": { "type": "string", "maxLength": 128 },
+        "contactPhone": { "type": "string", "maxLength": 30 },
+        "reportedBy": { "type": "string", "maxLength": 128 },
+        "reportedByName": { "type": "string", "maxLength": 100 },
+        "reportedByEmail": { "type": "string", "maxLength": 128 },
+        "securityQuestion": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "itemType", "category", "location", "status", "reportedBy"]
+    },
+    "Claim": {
+      "title": "Item Claim Request",
+      "description": "A claim request submitted by a student or staff for a found item",
+      "type": "object",
+      "properties": {
+        "itemId": { "type": "string", "maxLength": 128 },
+        "itemTitle": { "type": "string", "maxLength": 150 },
+        "claimantId": { "type": "string", "maxLength": 128 },
+        "claimantName": { "type": "string", "maxLength": 100 },
+        "claimantEmail": { "type": "string", "maxLength": 128 },
+        "claimantPhone": { "type": "string", "maxLength": 30 },
+        "proofDetails": { "type": "string", "maxLength": 2000 },
+        "proofImageUrl": { "type": "string", "maxLength": 1000000 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected", "returned"], "maxLength": 20 },
+        "adminNotes": { "type": "string", "maxLength": 1000 },
+        "reviewedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["itemId", "claimantId", "claimantEmail", "proofDetails", "status"]
+    },
+    "AdminRecord": {
+      "title": "Admin Permission Record",
+      "description": "Indicates administrative authorization",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 128 },
+        "assignedAt": { "type": "string", "format": "date-time" },
+        "role": { "type": "string", "maxLength": 20 }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Stores user profiles with student info and role details"
+    },
+    "/items/{itemId}": {
+      "schema": { "$ref": "#/entities/Item" },
+      "description": "Lost and found items reported by users and managed by staff"
+    },
+    "/claims/{claimId}": {
+      "schema": { "$ref": "#/entities/Claim" },
+      "description": "Claim submissions against found items, reviewable by claimant and admins"
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Admin identity records used for RBAC authorization checks"
+    }
+  }
+}

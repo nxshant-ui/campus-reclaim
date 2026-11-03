@@ -1,0 +1,157 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'nr3428614@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Validation Helpers
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'email', 'role', 'campusId', 'phone', 'department', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() <= 128 &&
+        data.email is string && data.email.size() <= 128 &&
+        data.role in ['student', 'staff', 'admin'] &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+        (!('campusId' in data) || (data.campusId is string && data.campusId.size() <= 50)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+        (!('department' in data) || (data.department is string && data.department.size() <= 100)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50));
+    }
+
+    function isValidItem(data) {
+      return data.keys().hasAll(['title', 'itemType', 'category', 'location', 'status', 'reportedBy']) &&
+        data.keys().hasOnly(['title', 'description', 'itemType', 'category', 'location', 'incidentDate', 'status', 'imageUrl', 'contactName', 'contactEmail', 'contactPhone', 'reportedBy', 'reportedByName', 'reportedByEmail', 'securityQuestion', 'createdAt', 'updatedAt']) &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+        data.itemType in ['lost', 'found'] &&
+        data.category is string && data.category.size() <= 50 &&
+        data.location is string && data.location.size() <= 150 &&
+        data.status in ['open', 'claimed', 'returned', 'closed'] &&
+        data.reportedBy is string && data.reportedBy.size() <= 128 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
+        (!('incidentDate' in data) || (data.incidentDate is string && data.incidentDate.size() <= 50)) &&
+        (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 1000000)) &&
+        (!('contactName' in data) || (data.contactName is string && data.contactName.size() <= 100)) &&
+        (!('contactEmail' in data) || (data.contactEmail is string && data.contactEmail.size() <= 128)) &&
+        (!('contactPhone' in data) || (data.contactPhone is string && data.contactPhone.size() <= 30)) &&
+        (!('reportedByName' in data) || (data.reportedByName is string && data.reportedByName.size() <= 100)) &&
+        (!('reportedByEmail' in data) || (data.reportedByEmail is string && data.reportedByEmail.size() <= 128)) &&
+        (!('securityQuestion' in data) || (data.securityQuestion is string && data.securityQuestion.size() <= 200)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50));
+    }
+
+    function isValidClaim(data) {
+      return data.keys().hasAll(['itemId', 'claimantId', 'claimantEmail', 'proofDetails', 'status']) &&
+        data.keys().hasOnly(['itemId', 'itemTitle', 'claimantId', 'claimantName', 'claimantEmail', 'claimantPhone', 'proofDetails', 'proofImageUrl', 'status', 'adminNotes', 'reviewedBy', 'createdAt', 'updatedAt']) &&
+        data.itemId is string && data.itemId.size() <= 128 &&
+        data.claimantId is string && data.claimantId.size() <= 128 &&
+        data.claimantEmail is string && data.claimantEmail.size() <= 128 &&
+        data.proofDetails is string && data.proofDetails.size() <= 2000 &&
+        data.status in ['pending', 'approved', 'rejected', 'returned'] &&
+        (!('itemTitle' in data) || (data.itemTitle is string && data.itemTitle.size() <= 150)) &&
+        (!('claimantName' in data) || (data.claimantName is string && data.claimantName.size() <= 100)) &&
+        (!('claimantPhone' in data) || (data.claimantPhone is string && data.claimantPhone.size() <= 30)) &&
+        (!('proofImageUrl' in data) || (data.proofImageUrl is string && data.proofImageUrl.size() <= 1000000)) &&
+        (!('adminNotes' in data) || (data.adminNotes is string && data.adminNotes.size() <= 1000)) &&
+        (!('reviewedBy' in data) || (data.reviewedBy is string && data.reviewedBy.size() <= 128)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50));
+    }
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+        data.keys().hasOnly(['email', 'role', 'assignedAt']) &&
+        data.email is string && data.email.size() <= 128 &&
+        data.role is string && data.role.size() <= 20 &&
+        (!('assignedAt' in data) || (data.assignedAt is string && data.assignedAt.size() <= 50));
+    }
+
+    // Collection: Users
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (isAdmin() || isUser(userId));
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isValidId(userId) && isUser(userId) && isValidUserProfile(incoming()) && (incoming().role != 'admin' || isAdmin());
+      allow update: if isSignedIn() && isValidId(userId) && (isAdmin() || (isUser(userId) && isValidUserProfile(incoming()) && incoming().role == existing().role));
+      allow delete: if isAdmin();
+    }
+
+    // Collection: Items
+    match /items/{itemId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidId(itemId) && isValidItem(incoming()) && incoming().reportedBy == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(itemId) && isValidItem(incoming()) && (
+        isAdmin() || (
+          existing().reportedBy == request.auth.uid &&
+          incoming().reportedBy == existing().reportedBy &&
+          (existing().status != 'returned' || isAdmin())
+        )
+      );
+      allow delete: if isSignedIn() && isValidId(itemId) && (isAdmin() || existing().reportedBy == request.auth.uid);
+    }
+
+    // Collection: Claims
+    match /claims/{claimId} {
+      allow get: if isSignedIn() && isValidId(claimId) && (isAdmin() || resource.data.claimantId == request.auth.uid);
+      allow list: if isSignedIn() && (isAdmin() || resource.data.claimantId == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(claimId) && isValidClaim(incoming()) && incoming().claimantId == request.auth.uid && incoming().status == 'pending';
+      allow update: if isSignedIn() && isValidId(claimId) && isValidClaim(incoming()) && (
+        isAdmin() || (
+          existing().claimantId == request.auth.uid &&
+          incoming().claimantId == existing().claimantId &&
+          incoming().status == existing().status &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['proofDetails', 'proofImageUrl', 'claimantPhone', 'updatedAt'])
+        )
+      );
+      allow delete: if isSignedIn() && isValidId(claimId) && (isAdmin() || existing().claimantId == request.auth.uid);
+    }
+
+    // Collection: Admins
+    match /admins/{adminUid} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Collection: Settings
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Collection: Test connection
+    match /test/{testId} {
+      allow read, write: if true;
+    }
+  }
+}

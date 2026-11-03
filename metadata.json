@@ -1,0 +1,6 @@
+{
+  "name": "Campus Reclaim",
+  "description": "A smart digital platform where college students can report lost items, submit found items, search belongings and request item recovery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
